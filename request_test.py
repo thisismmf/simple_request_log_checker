@@ -10,7 +10,7 @@ LOGS_DIR = "logs"
 RESULTS_DIR = "results"
 ERRORS_FILE = os.path.join(RESULTS_DIR, "errors.txt")
 ERRORS_LOCK = threading.Lock()
-URL = "http://192.168.10.62/predictions/ner/"
+BASE_URL = "http://192.168.10.62/predictions"
 HEADERS = {
     'Authorization': 'Basic YWk6MTI1NDYzOTc4',
     'Content-Type': 'application/json'
@@ -19,6 +19,10 @@ SLEEP_SECONDS = 10
 
 
 def process_file(input_path: str, output_path: str):
+    # derive AI module from filename
+    module_name = os.path.basename(input_path).split("_", 1)[0]
+    url = f"{BASE_URL}/{module_name}/"
+
     # load input
     with open(input_path, "r", encoding="utf-8") as f:
         data_list = json.load(f)
@@ -28,7 +32,7 @@ def process_file(input_path: str, output_path: str):
     # first, try sending all elements as one batch
     batch_payload = json.dumps(data_list, ensure_ascii=False)
     try:
-        batch_resp = requests.post(URL, headers=HEADERS, data=batch_payload)
+        batch_resp = requests.post(url, headers=HEADERS, data=batch_payload)
         batch_resp.raise_for_status()
         results.append(f"✔ Batch request successful for all {len(data_list)} elements\n")
         results.append(batch_resp.text + "\n")
@@ -39,7 +43,7 @@ def process_file(input_path: str, output_path: str):
             payload = json.dumps([element], ensure_ascii=False)
             print(f"[{os.path.basename(input_path)}] → item {idx}/{len(data_list)}: sending…")
             try:
-                resp = requests.post(URL, headers=HEADERS, data=payload)
+                resp = requests.post(url, headers=HEADERS, data=payload)
                 resp.raise_for_status()
                 result_text = resp.text
             except Exception as e:
